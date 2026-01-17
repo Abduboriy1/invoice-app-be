@@ -1,0 +1,34 @@
+server:
+  port: 8080
+  environment: development
+  read_timeout: 15s
+  write_timeout: 15s
+
+database:
+  host: localhost
+  port: 5432
+  user: postgres
+  password:
+  dbname: invoices
+  sslmode: disable
+  max_conns: 25
+  min_conns: 5
+
+auth:
+  jwt_secret: your-secret-key-change-in-production
+  token_duration: 24h
+
+jira:
+  base_url: ""
+  enabled: false
+
+square:
+  access_token: ""
+  environment: sandbox
+  enabled: false
+
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0

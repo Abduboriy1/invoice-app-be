@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: invoiceuser
+      POSTGRES_PASSWORD: invoicepass
+      POSTGRES_DB: invoices  # This is the DB name, not invoiceuser
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U invoiceuser -d invoices" ]  # Added -d invoices
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  migrate:
+    image: migrate/migrate
+    volumes:
+      - ./migrations:/migrations
+    command: [ "-path", "/migrations", "-database", "postgresql://invoiceuser:invoicepass@postgres:5432/invoices?sslmode=disable", "up" ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      APP_DATABASE_HOST: postgres
+      APP_DATABASE_PORT: 5432
+      APP_DATABASE_USER: postgres
+      APP_DATABASE_PASSWORD:
+      APP_DATABASE_DBNAME: invoices
+      APP_DATABASE_SSLMODE: disable
+      APP_REDIS_HOST: redis
+      APP_SERVER_PORT: 8080
+      APP_AUTH_JWT_SECRET: your-secret-key-change-in-production
+      APP_AUTH_TOKEN_DURATION: 24h
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_data:

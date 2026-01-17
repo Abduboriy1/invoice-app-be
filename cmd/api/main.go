@@ -33,6 +33,7 @@ import (
 func main() {
 	// Load configuration
 	cfg, err := config.Load()
+
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
@@ -51,6 +52,7 @@ func main() {
 
 	// Connect to database
 	logger.Info("Connecting to database...")
+
 	db, err := postgres.NewConnection(&cfg.Database)
 	if err != nil {
 		logger.Error("Failed to connect to database", "error", err)

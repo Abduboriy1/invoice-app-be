@@ -80,7 +80,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	authenticate, err := h.userService.Authenticate(r.Context(), req.Email, req.Password)
 	if err != nil {
-		respondError(w, http.StatusUnauthorized, "Invalid cssssredentials")
+		respondError(w, http.StatusUnauthorized, "Invalid credentials")
 		return
 	}
 

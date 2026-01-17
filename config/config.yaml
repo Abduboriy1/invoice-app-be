@@ -16,7 +16,7 @@ database:
 
 auth:
   jwt_secret: your-secret-key-change-in-production
-  token_duration: 24h
+  token_duration: "24h"
 
 jira:
   base_url: ""

@@ -2,6 +2,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -36,8 +37,8 @@ type DatabaseConfig struct {
 }
 
 type AuthConfig struct {
-	JWTSecret     string
-	TokenDuration time.Duration
+	JWTSecret     string        `mapstructure:"jwt_secret"`
+	TokenDuration time.Duration `mapstructure:"token_duration"`
 }
 
 type JiraConfig struct {
@@ -72,7 +73,8 @@ func Load() (*Config, error) {
 
 	// Read config file (if exists)
 	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		if !errors.As(err, &configFileNotFoundError) {
 			return nil, fmt.Errorf("reading config: %w", err)
 		}
 	}

@@ -15,10 +15,11 @@ type CreateTimeEntryRequest struct {
 }
 
 type UpdateTimeEntryRequest struct {
-	Description string  `json:"description" validate:"required"`
-	Hours       float64 `json:"hours" validate:"required,gt=0"`
-	Date        string  `json:"date" validate:"required"`
-	IsBillable  bool    `json:"is_billable"`
+	Description  string  `json:"description" validate:"required"`
+	Hours        float64 `json:"hours" validate:"required,gt=0"`
+	Date         string  `json:"date" validate:"required"`
+	IsBillable   bool    `json:"is_billable"`
+	JiraIssueKey *string `json:"jira_issue_key"`
 }
 
 type SyncToJiraRequest struct {
@@ -39,6 +40,7 @@ type TimeEntryResponse struct {
 	IsInvoiced    bool     `json:"is_invoiced"`
 	CreatedAt     string   `json:"created_at"`
 	UpdatedAt     string   `json:"updated_at"`
+	JiraSyncedAt  *string  `json:"jira_synced_at"`
 }
 
 func TimeEntryFromDomain(entry *timeentry.TimeEntry) TimeEntryResponse {
@@ -69,6 +71,11 @@ func TimeEntryFromDomain(entry *timeentry.TimeEntry) TimeEntryResponse {
 
 	if entry.JiraWorklogID != nil {
 		resp.JiraWorklogID = entry.JiraWorklogID
+	}
+
+	if entry.JiraSyncedAt != nil {
+		syncedAt := entry.JiraSyncedAt.Format(time.RFC3339)
+		resp.JiraSyncedAt = &syncedAt
 	}
 
 	return resp

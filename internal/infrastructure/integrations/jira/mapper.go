@@ -2,6 +2,7 @@
 package jira
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,8 +14,11 @@ func MapWorklogToTimeEntry(userID uuid.UUID, worklog Worklog) *timeentry.TimeEnt
 	// Convert time spent seconds to hours
 	hours := float64(worklog.TimeSpentSeconds) / 3600.0
 
-	// Use the Started field directly (it's already time.Time)
+	// Use the Started field (it's already time.Time)
 	date := worklog.Started.Truncate(24 * time.Hour)
+
+	// Extract comment text from the nested structure
+	commentText := extractCommentText(worklog.Comment)
 
 	// Store Jira-specific fields
 	issueKey := worklog.IssueKey
@@ -25,7 +29,7 @@ func MapWorklogToTimeEntry(userID uuid.UUID, worklog Worklog) *timeentry.TimeEnt
 		ID:            uuid.New(),
 		UserID:        userID,
 		InvoiceID:     nil,
-		Description:   worklog.Comment,
+		Description:   commentText,
 		Hours:         hours,
 		HourlyRate:    nil,
 		Date:          date,
@@ -39,21 +43,21 @@ func MapWorklogToTimeEntry(userID uuid.UUID, worklog Worklog) *timeentry.TimeEnt
 	}
 }
 
-// MapTimeEntryToJiraWorklog converts a TimeEntry to Jira worklog format
-func MapTimeEntryToJiraWorklog(entry *timeentry.TimeEntry) (issueKey string, timeSpentSeconds int, comment string, started time.Time) {
-	// Convert hours to seconds
-	timeSpentSeconds = int(entry.Hours * 3600)
+// extractCommentText extracts plain text from Jira's nested comment structure
+func extractCommentText(comment Comment) string {
+	var texts []string
 
-	// Use the entry's date as the start time (at midnight)
-	started = entry.Date
-
-	// Use description as comment
-	comment = entry.Description
-
-	// Get issue key if available
-	if entry.JiraIssueKey != nil {
-		issueKey = *entry.JiraIssueKey
+	for _, content := range comment.Content {
+		for _, textContent := range content.Content {
+			if textContent.Text != "" {
+				texts = append(texts, textContent.Text)
+			}
+		}
 	}
 
-	return issueKey, timeSpentSeconds, comment, started
+	if len(texts) == 0 {
+		return "No description"
+	}
+
+	return strings.Join(texts, " ")
 }

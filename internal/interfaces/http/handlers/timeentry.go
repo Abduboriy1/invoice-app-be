@@ -1,4 +1,4 @@
-// internal/interfaces/http/handlers/timeentry.go
+// Package handlers internal/interfaces/http/handlers/timeentry.go
 package handlers
 
 import (
@@ -25,8 +25,8 @@ func NewTimeEntryHandler(service *timeentry.Service) *TimeEntryHandler {
 
 func (h *TimeEntryHandler) List(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserIDFromContext(r.Context())
-
-	entries, err := h.service.ListTimeEntries(r.Context(), userID)
+	query := r.URL.Query()
+	entries, err := h.service.ListTimeEntries(r.Context(), userID, query.Get("start_date"), query.Get("end_date"))
 	if err != nil {
 		log.Print(err)
 		respondError(w, http.StatusInternalServerError, "Failed to fetch time entries")
@@ -106,12 +106,13 @@ func (h *TimeEntryHandler) Update(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusBadRequest, "Invalid date format. Expected YYYY-MM-DD")
 		return
 	}
-
+	log.Println(date)
 	entry, err := h.service.UpdateTimeEntry(r.Context(), userID, entryID, timeentry.UpdateTimeEntryRequest{
-		Description: req.Description,
-		Hours:       req.Hours,
-		Date:        date,
-		IsBillable:  req.IsBillable,
+		Description:  req.Description,
+		Hours:        req.Hours,
+		Date:         date,
+		IsBillable:   req.IsBillable,
+		JiraIssueKey: req.JiraIssueKey,
 	})
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "Failed to update time entry")

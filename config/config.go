@@ -42,8 +42,10 @@ type AuthConfig struct {
 }
 
 type JiraConfig struct {
-	BaseURL string
-	Enabled bool
+	BaseURL  string `mapstructure:"base_url"`
+	Email    string `mapstructure:"email"`
+	APIToken string `mapstructure:"api_token"`
+	Enabled  bool   `mapstructure:"enabled"`
 }
 
 type SquareConfig struct {

@@ -8,7 +8,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-
 	"github.com/invoice-app-be/internal/interfaces/http/handlers"
 	mw "github.com/invoice-app-be/internal/interfaces/http/middleware"
 )
@@ -17,6 +16,7 @@ type Router struct {
 	invoiceHandler   *handlers.InvoiceHandler
 	timeEntryHandler *handlers.TimeEntryHandler
 	authHandler      *handlers.AuthHandler
+	jiraHandler      *handlers.JiraHandler // Can be nil
 	authMiddleware   *mw.AuthMiddleware
 }
 
@@ -24,12 +24,14 @@ func NewRouter(
 	invoiceHandler *handlers.InvoiceHandler,
 	timeEntryHandler *handlers.TimeEntryHandler,
 	authHandler *handlers.AuthHandler,
+	jiraHandler *handlers.JiraHandler,
 	authMiddleware *mw.AuthMiddleware,
 ) *Router {
 	return &Router{
 		invoiceHandler:   invoiceHandler,
 		timeEntryHandler: timeEntryHandler,
 		authHandler:      authHandler,
+		jiraHandler:      jiraHandler,
 		authMiddleware:   authMiddleware,
 	}
 }
@@ -68,7 +70,6 @@ func (rt *Router) Setup() http.Handler {
 
 		// Protected routes
 		r.Group(func(r chi.Router) {
-			// TODO For some reason below is now letting user in even if the user successfully logs in
 			r.Use(rt.authMiddleware.Authenticate)
 
 			// Invoices
@@ -90,6 +91,25 @@ func (rt *Router) Setup() http.Handler {
 				r.Put("/{id}", rt.timeEntryHandler.Update)
 				r.Delete("/{id}", rt.timeEntryHandler.Delete)
 				r.Post("/{id}/sync-jira", rt.timeEntryHandler.SyncToJira)
+			})
+
+			// Jira Integration - ALWAYS REGISTER (with nil checks in handler)
+			r.Route("/jira", func(r chi.Router) {
+				if rt.jiraHandler != nil {
+					r.Post("/pull-worklogs", rt.jiraHandler.PullWorklogs)
+					r.Post("/pull-issue-worklogs", rt.jiraHandler.PullWorklogsForIssue)
+					r.Post("/push-worklog", rt.jiraHandler.PushWorklog)
+				} else {
+					// Return error if Jira not configured
+					notConfigured := func(w http.ResponseWriter, r *http.Request) {
+						w.Header().Set("Content-Type", "application/json")
+						w.WriteHeader(http.StatusServiceUnavailable)
+						w.Write([]byte(`{"error":"Jira integration is not configured"}`))
+					}
+					r.Post("/pull-worklogs", notConfigured)
+					r.Post("/pull-issue-worklogs", notConfigured)
+					r.Post("/push-worklog", notConfigured)
+				}
 			})
 		})
 	})

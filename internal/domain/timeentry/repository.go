@@ -10,7 +10,7 @@ import (
 type Repository interface {
 	Create(ctx context.Context, entry *TimeEntry) error
 	GetByID(ctx context.Context, id uuid.UUID) (*TimeEntry, error)
-	GetByUserID(ctx context.Context, userID uuid.UUID) ([]TimeEntry, error)
+	GetByUserID(ctx context.Context, userID uuid.UUID, startDate string, endDate string) ([]TimeEntry, error)
 	GetByJiraWorklogID(ctx context.Context, worklogID string) (*TimeEntry, error)
 	Update(ctx context.Context, entry *TimeEntry) error
 	Delete(ctx context.Context, id uuid.UUID) error

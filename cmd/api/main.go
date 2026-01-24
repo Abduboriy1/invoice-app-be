@@ -74,11 +74,21 @@ func main() {
 	userRepo := postgres.NewUserRepository(db)
 	clientRepo := postgres.NewClientRepository(db)
 
-	// Initialize integrations (optional, based on config)
-	var jiraClient *jira.Client
-	if cfg.Jira.Enabled && cfg.Jira.BaseURL != "" {
-		jiraClient = jira.NewClient(cfg.Jira.BaseURL, "", "") // User-specific credentials loaded per request
-		logger.Info("Jira integration enabled")
+	// Initialize Jira integration
+	var jiraSyncService *jira.SyncService
+	var jiraClient *jira.Client // Add this
+	if cfg.Jira.Enabled {
+		if cfg.Jira.BaseURL == "" || cfg.Jira.Email == "" || cfg.Jira.APIToken == "" {
+			logger.Warn("Jira is enabled but credentials are missing")
+		} else {
+			jiraClient := jira.NewClient(cfg.Jira.BaseURL, cfg.Jira.Email, cfg.Jira.APIToken)
+			jiraSyncService = jira.NewSyncService(jiraClient, timeEntryRepo)
+			logger.Info("Jira integration enabled",
+				"base_url", cfg.Jira.BaseURL,
+				"email", cfg.Jira.Email)
+		}
+	} else {
+		logger.Info("Jira integration disabled")
 	}
 
 	var squareClient *square.Client
@@ -104,11 +114,18 @@ func main() {
 	invoiceHandler := handlers.NewInvoiceHandler(invoiceService, clientRepo)
 	timeEntryHandler := handlers.NewTimeEntryHandler(timeEntryService)
 
+	// Only create Jira handler if Jira is configured
+	var jiraHandler *handlers.JiraHandler
+	if jiraSyncService != nil {
+		jiraHandler = handlers.NewJiraHandler(jiraSyncService, timeEntryRepo)
+	}
+
 	// Setup router
 	router := infraHTTP.NewRouter(
 		invoiceHandler,
 		timeEntryHandler,
 		authHandler,
+		jiraHandler,
 		authMiddleware,
 	)
 	handler := router.Setup()
@@ -150,7 +167,6 @@ func main() {
 	logger.Info("Server exited")
 }
 
-// Add this helper function at the bottom of main.go
 func runMigrations(cfg *config.DatabaseConfig) error {
 	dsn := fmt.Sprintf(
 		"postgres://%s:%s@%s:%d/%s?sslmode=%s",

@@ -4,6 +4,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
@@ -41,12 +42,22 @@ func (r *TimeEntryRepository) GetByID(ctx context.Context, id uuid.UUID) (*timee
 	return &entry, nil
 }
 
-func (r *TimeEntryRepository) GetByUserID(ctx context.Context, userID uuid.UUID) ([]timeentry.TimeEntry, error) {
+func (r *TimeEntryRepository) GetByUserID(ctx context.Context, userID uuid.UUID, startDate string, endDate string) ([]timeentry.TimeEntry, error) {
 	var entries []timeentry.TimeEntry
-	query := `SELECT * FROM time_entries WHERE user_id = $1 ORDER BY date DESC`
-	if err := r.db.SelectContext(ctx, &entries, query, userID); err != nil {
+
+	// If no dates provided, default to current date
+	if startDate == "" && endDate == "" {
+		now := time.Now().Format("2006-01-02")
+		startDate = now
+		endDate = now
+	}
+
+	query := `SELECT * FROM time_entries WHERE user_id = $1 AND date BETWEEN $2 AND $3 ORDER BY date DESC`
+
+	if err := r.db.SelectContext(ctx, &entries, query, userID, startDate, endDate); err != nil {
 		return nil, fmt.Errorf("getting time entries: %w", err)
 	}
+
 	return entries, nil
 }
 
@@ -61,10 +72,10 @@ func (r *TimeEntryRepository) GetByJiraWorklogID(ctx context.Context, worklogID 
 
 func (r *TimeEntryRepository) Update(ctx context.Context, entry *timeentry.TimeEntry) error {
 	query := `
-        UPDATE time_entries SET description = $2, hours = $3, jira_worklog_id = $4, updated_at = $5
+        UPDATE time_entries SET description = $2, hours = $3, jira_worklog_id = $4, updated_at = $5, date = $6, jira_issue_key = $7
         WHERE id = $1
     `
-	_, err := r.db.ExecContext(ctx, query, entry.ID, entry.Description, entry.Hours, entry.JiraWorklogID, entry.UpdatedAt)
+	_, err := r.db.ExecContext(ctx, query, entry.ID, entry.Description, entry.Hours, entry.JiraWorklogID, entry.UpdatedAt, entry.Date, entry.JiraIssueKey)
 	return err
 }
 

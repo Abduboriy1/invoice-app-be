@@ -33,10 +33,11 @@ type CreateTimeEntryRequest struct {
 }
 
 type UpdateTimeEntryRequest struct {
-	Description string
-	Hours       float64
-	Date        time.Time
-	IsBillable  bool
+	Description  string
+	Hours        float64
+	Date         time.Time
+	IsBillable   bool
+	JiraIssueKey *string
 }
 
 func (s *Service) CreateTimeEntry(ctx context.Context, userID uuid.UUID, req CreateTimeEntryRequest) (*TimeEntry, error) {
@@ -59,8 +60,8 @@ func (s *Service) CreateTimeEntry(ctx context.Context, userID uuid.UUID, req Cre
 	return entry, nil
 }
 
-func (s *Service) ListTimeEntries(ctx context.Context, userID uuid.UUID) ([]TimeEntry, error) {
-	entries, err := s.repo.GetByUserID(ctx, userID)
+func (s *Service) ListTimeEntries(ctx context.Context, userID uuid.UUID, startDate string, endDate string) ([]TimeEntry, error) {
+	entries, err := s.repo.GetByUserID(ctx, userID, startDate, endDate)
 	if err != nil {
 		return nil, fmt.Errorf("listing time entries: %w", err)
 	}
@@ -95,6 +96,7 @@ func (s *Service) UpdateTimeEntry(ctx context.Context, userID, entryID uuid.UUID
 	entry.Date = req.Date
 	entry.IsBillable = req.IsBillable
 	entry.UpdatedAt = time.Now()
+	entry.JiraIssueKey = req.JiraIssueKey
 
 	if err := s.repo.Update(ctx, entry); err != nil {
 		return nil, fmt.Errorf("updating time entry: %w", err)
